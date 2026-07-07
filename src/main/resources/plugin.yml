@@ -1,0 +1,11 @@
+name: Delta
+version: '${version}'
+
+main: dev.moti.delta.Delta
+api-version: '26.1.2'
+load: POSTWORLD
+
+commands:
+  delta:
+    description: Delta version control
+    usage: /delta <command>
