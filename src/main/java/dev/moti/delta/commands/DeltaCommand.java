@@ -4,6 +4,7 @@ import dev.moti.delta.Delta;
 import dev.moti.delta.registry.RepoEntry;
 import dev.moti.delta.repo.ChunkSlicer;
 import dev.moti.delta.repo.ChunkSlice;
+import dev.moti.delta.repo.Blob;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -179,40 +180,75 @@ public class DeltaCommand implements CommandExecutor{
     //===========================================================
 
     private void cmdDebug(CommandSender sender, String[] args) {
-        if (args.length < 3) {
-            sender.sendMessage("Usage: /delta debug chunkslicer <projectName>");
-            return;
-        }
+        switch (args[1].toLowerCase()) {
+            case "chunkslicer": {
+                if (args.length < 4) {
+                    sender.sendMessage("Delta: Debug: Missing Argument.");
+                    return;
+                }
+                String projectName = args[2];
 
-        if (!args[1].equalsIgnoreCase("chunkslicer")) {
-            sender.sendMessage("Unknown debug target: " + args[1]);
-            return;
-        }
+                RepoEntry entry = plugin.getRegistryManager().get(projectName);
+                if (entry == null) {
+                    sender.sendMessage("No project named '" + projectName + "' found.");
+                    return;
+                }
 
-        String projectName = args[2];
+                List<ChunkSlice> slices = ChunkSlicer.slice(
+                        entry.x1(), entry.y1(), entry.z1(),
+                        entry.x2(), entry.y2(), entry.z2()
+                );
 
-        RepoEntry entry = plugin.getRegistryManager().get(projectName);
-        if (entry == null) {
-            sender.sendMessage("No project named '" + projectName + "' found.");
-            return;
-        }
+                sender.sendMessage("=== ChunkSlicer debug: " + projectName + " ===");
+                sender.sendMessage("Region: (" + entry.x1() + "," + entry.y1() + "," + entry.z1()
+                        + ") -> (" + entry.x2() + "," + entry.y2() + "," + entry.z2() + ")");
+                sender.sendMessage("Total chunks: " + slices.size());
 
-        List<ChunkSlice> slices = ChunkSlicer.slice(
-                entry.x1(), entry.y1(), entry.z1(),
-                entry.x2(), entry.y2(), entry.z2()
-        );
+                for (int i = 0; i < slices.size(); i++) {
+                    ChunkSlice s = slices.get(i);
+                    sender.sendMessage("  [" + i + "] ("
+                            + s.x1() + "," + s.y1() + "," + s.z1() + ") -> ("
+                            + s.x2() + "," + s.y2() + "," + s.z2() + ")"
+                            + " — " + s.blockCount() + " blocks");
+                }
+                return;
+            }
+            case "blob": {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage("Delta: This command must be run by a player.");
+                    return;
+                }
 
-        sender.sendMessage("=== ChunkSlicer debug: " + projectName + " ===");
-        sender.sendMessage("Region: (" + entry.x1() + "," + entry.y1() + "," + entry.z1()
-                + ") -> (" + entry.x2() + "," + entry.y2() + "," + entry.z2() + ")");
-        sender.sendMessage("Total chunks: " + slices.size());
+                if (args.length < 4) {
+                    sender.sendMessage("Delta: Debug: Missing argument.");
+                }
+                String projectName = args[2];
 
-        for (int i = 0; i < slices.size(); i++) {
-            ChunkSlice s = slices.get(i);
-            sender.sendMessage("  [" + i + "] ("
-                    + s.x1() + "," + s.y1() + "," + s.z1() + ") -> ("
-                    + s.x2() + "," + s.y2() + "," + s.z2() + ")"
-                    + " — " + s.blockCount() + " blocks");
+                RepoEntry entry = plugin.getRegistryManager().get(projectName);
+                if (entry == null) {
+                    sender.sendMessage("No project named '" + projectName + "' found.");
+                    return;
+                }
+
+                List<ChunkSlice> slices = ChunkSlicer.slice(
+                        entry.x1(), entry.y1(), entry.z1(),
+                        entry.x2(), entry.y2(), entry.z2()
+                );
+                File worldContainer = plugin.getServer().getWorldContainer();
+                File deltaDir = new File(worldContainer, ".delta");
+                File projectDir = new File(deltaDir, projectName);
+                File objectsDir = new File(projectDir, "objects");
+
+                try {
+                    String hash = Blob.write(objectsDir, player.getWorld(), slices.getFirst());
+                    sender.sendMessage("Delta: Debug: hash = " + hash);
+                }catch (IOException e) {
+                    sender.sendMessage("Delta: Debug: " + e.getMessage());
+                }
+                return;
+            }
+            default:
+                sender.sendMessage("Delta: Debug: Class '"+args[1]+"' doesn't exist or is not in debug list.");
         }
     }
 

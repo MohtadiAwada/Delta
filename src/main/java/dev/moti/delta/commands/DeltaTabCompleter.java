@@ -20,7 +20,7 @@ public class DeltaTabCompleter implements TabCompleter {
         List<String> suggestions = new ArrayList<>();
 
         if (args.length  == 1) {
-            List<String> commands = List.of("init", "list", "select", "selected");
+            List<String> commands = List.of("init", "list", "select", "selected", "debug");
             for (String cmd : commands) {
                 if (cmd.startsWith(args[0].toLowerCase())) {
                     suggestions.add(cmd);
@@ -28,6 +28,20 @@ public class DeltaTabCompleter implements TabCompleter {
             }
             return suggestions;
         }
-        return List.of("no text");
+        if (args.length == 2) {
+            switch(args[0].toLowerCase()) {
+                case "debug":
+                    List<String> debugList = List.of("chunkslicer", "blob");
+                    for (String dClass : debugList) {
+                        if (dClass.startsWith(args[1].toLowerCase())) {
+                            suggestions.add(dClass);
+                        }
+                    }
+                default:
+                    break;
+            }
+            return suggestions;
+        }
+        return suggestions;
     }
 }
