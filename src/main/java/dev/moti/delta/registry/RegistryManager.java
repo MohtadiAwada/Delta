@@ -58,6 +58,13 @@ public class RegistryManager {
         return false;
     }
 
+    public RepoEntry get(String name) {
+        for (RepoEntry e : entries) {
+            if (e.name().equalsIgnoreCase(name)) return e;
+        }
+        return null;
+    }
+
     public List<RepoEntry> getAll() {
         return Collections.unmodifiableList(entries);
     }

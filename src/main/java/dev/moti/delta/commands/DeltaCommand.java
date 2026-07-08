@@ -2,11 +2,13 @@ package dev.moti.delta.commands;
 
 import dev.moti.delta.Delta;
 import dev.moti.delta.registry.RepoEntry;
+import dev.moti.delta.repo.ChunkSlicer;
+import dev.moti.delta.repo.ChunkSlice;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.checkerframework.checker.units.qual.C;
+
 
 import java.io.File;
 import java.io.IOException;
@@ -36,6 +38,9 @@ public class DeltaCommand implements CommandExecutor{
                 return true;
             case "selected":
                 cmdSelected(sender, args);
+                return true;
+            case "debug":
+                cmdDebug(sender,args);
                 return true;
             default:
                 sender.sendMessage("Delta: Unknown command.");
@@ -167,6 +172,48 @@ public class DeltaCommand implements CommandExecutor{
         }
 
         sender.sendMessage("Delta: Selected project '"+selected+"'.");
+    }
+
+    //===========================================================
+    // debug
+    //===========================================================
+
+    private void cmdDebug(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            sender.sendMessage("Usage: /delta debug chunkslicer <projectName>");
+            return;
+        }
+
+        if (!args[1].equalsIgnoreCase("chunkslicer")) {
+            sender.sendMessage("Unknown debug target: " + args[1]);
+            return;
+        }
+
+        String projectName = args[2];
+
+        RepoEntry entry = plugin.getRegistryManager().get(projectName);
+        if (entry == null) {
+            sender.sendMessage("No project named '" + projectName + "' found.");
+            return;
+        }
+
+        List<ChunkSlice> slices = ChunkSlicer.slice(
+                entry.x1(), entry.y1(), entry.z1(),
+                entry.x2(), entry.y2(), entry.z2()
+        );
+
+        sender.sendMessage("=== ChunkSlicer debug: " + projectName + " ===");
+        sender.sendMessage("Region: (" + entry.x1() + "," + entry.y1() + "," + entry.z1()
+                + ") -> (" + entry.x2() + "," + entry.y2() + "," + entry.z2() + ")");
+        sender.sendMessage("Total chunks: " + slices.size());
+
+        for (int i = 0; i < slices.size(); i++) {
+            ChunkSlice s = slices.get(i);
+            sender.sendMessage("  [" + i + "] ("
+                    + s.x1() + "," + s.y1() + "," + s.z1() + ") -> ("
+                    + s.x2() + "," + s.y2() + "," + s.z2() + ")"
+                    + " — " + s.blockCount() + " blocks");
+        }
     }
 
     //===========================================================
