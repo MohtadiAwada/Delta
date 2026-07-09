@@ -3,8 +3,6 @@ package dev.moti.delta.repo;
 import org.bukkit.World;
 
 import java.io.*;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.ArrayList;
@@ -33,8 +31,8 @@ public class Blob {
             }
         }
         byte[] data = serialize(slice, platte, indices);
-        String hash = sha256(data);
-        File target = objectFile(objectsDir, hash);
+        String hash = ObjectStore.sha256(data);
+        File target = ObjectStore.objectFile(objectsDir, hash);
         if (!target.exists()) {
             try (FileOutputStream fos = new FileOutputStream(target)) {
                 fos.write(data);
@@ -56,21 +54,5 @@ public class Blob {
         dos.flush();
 
         return baos.toByteArray();
-    }
-    public static String sha256(byte[] data) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(data);
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hash) sb.append(String.format("%02x", b));
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 not available", e);
-        }
-    }
-    public static File objectFile(File objectsDir, String hash){
-        String prefix = hash.substring(0, 2);
-        String rest = hash.substring(2);
-        return new File(objectsDir, prefix + "/" + rest + ".dat");
     }
 }

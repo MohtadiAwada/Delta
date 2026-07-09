@@ -11,9 +11,9 @@ public class Tree {
 
     public static String write (File objectsDir, List<BlobRef> refs) throws IOException {
         byte[] data = serialize(refs);
-        String hash = Blob.sha256(data);
+        String hash = ObjectStore.sha256(data);
 
-        File target = Blob.objectFile(objectsDir, hash);
+        File target = ObjectStore.objectFile(objectsDir, hash);
         if (!target.exists()) {
             try (FileOutputStream fos = new FileOutputStream(target)) {
                 fos.write(data);
@@ -23,7 +23,7 @@ public class Tree {
     }
 
     public static List<BlobRef> read (File objectsDir, String treeHash) throws IOException {
-        File target = Blob.objectFile(objectsDir, treeHash);
+        File target = ObjectStore.objectFile(objectsDir, treeHash);
         List<BlobRef> refs = new ArrayList<>();
 
         try (DataInputStream dis = new DataInputStream(new FileInputStream(target))) {
