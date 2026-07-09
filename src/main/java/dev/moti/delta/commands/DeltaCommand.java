@@ -219,7 +219,7 @@ public class DeltaCommand implements CommandExecutor{
     private void cmdDebug(CommandSender sender, String[] args) {
         switch (args[1].toLowerCase()) {
             case "chunkslicer": {
-                if (args.length < 4) {
+                if (args.length < 3) {
                     sender.sendMessage("Delta: Debug: Missing Argument.");
                     return;
                 }
@@ -256,8 +256,9 @@ public class DeltaCommand implements CommandExecutor{
                     return;
                 }
 
-                if (args.length < 4) {
+                if (args.length < 3) {
                     sender.sendMessage("Delta: Debug: Missing argument.");
+                    return;
                 }
                 String projectName = args[2];
 
