@@ -2,17 +2,16 @@ package dev.moti.delta.commands;
 
 import dev.moti.delta.Delta;
 import dev.moti.delta.registry.RepoEntry;
-import dev.moti.delta.repo.ChunkSlicer;
-import dev.moti.delta.repo.ChunkSlice;
-import dev.moti.delta.repo.Blob;
+import dev.moti.delta.repo.*;
+
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -101,6 +100,44 @@ public class DeltaCommand implements CommandExecutor{
         RepoEntry entry = new RepoEntry(projectName, worldName, x1, y1, z1, x2, y2, z2);
         try {
             plugin.getRegistryManager().register(entry);
+        } catch (IOException e) {
+            sender.sendMessage("Delta: init: " + e.getMessage());
+            return;
+        }
+
+        List<ChunkSlice> slices = ChunkSlicer.slice(x1, y1, z1, x2, y2, z2);
+
+        List<Tree.BlobRef> blobRefs = new ArrayList<>();
+        for (ChunkSlice slice : slices) {
+            try {
+                String blobHash = Blob.write(objectsDir, player.getWorld(), slice);
+                blobRefs.add(new Tree.BlobRef(slice.x1(), slice.y1(), slice.z1(), slice.x2(), slice.y2(), slice.z2(), blobHash));
+            } catch (IOException e) {
+                sender.sendMessage("Delta: init: " + e.getMessage());
+                return;
+            }
+        }
+
+        String treeHash;
+        try {
+            treeHash = Tree.write(objectsDir, blobRefs);
+        } catch (IOException e) {
+            sender.sendMessage("Delta: init: " + e.getMessage());
+            return;
+        }
+
+        Commit.CommitResult result;
+        try {
+            result = Commit.write(objectsDir, treeHash, "", player.getName(), "initial commit.");
+        } catch (IOException e) {
+            sender.sendMessage("Delta: init: " + e.getMessage());
+            return;
+        }
+
+        File branchFile = new File(branchesDir, "main.dlb");
+        try {
+            Branch.CommitRecord record = new Branch.CommitRecord(result.hash(), "", player.getName(), result.timestamp(), "initial commit");
+            Branch.append(branchFile, record);
         } catch (IOException e) {
             sender.sendMessage("Delta: init: " + e.getMessage());
             return;

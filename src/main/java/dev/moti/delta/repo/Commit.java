@@ -6,8 +6,9 @@ public class Commit {
     private static final int FORMAT_VERSION = 1;
 
     public record CommitData(String treeHash, String parentHash, String author, long timestamp, String message) {}
+    public record CommitResult(String hash, long timestamp) {}
 
-    public static String write (File objectsDir, String treeHash, String parentHash, String author, String message) throws IOException {
+    public static CommitResult write (File objectsDir, String treeHash, String parentHash, String author, String message) throws IOException {
         long timestamp = System.currentTimeMillis();
         byte[] data = serialize(treeHash, parentHash, author, timestamp, message);
         String hash = ObjectStore.sha256(data);
@@ -19,7 +20,7 @@ public class Commit {
             }
         }
 
-        return hash;
+        return new CommitResult(hash, timestamp);
     }
 
     public static CommitData read (File objectsDir, String commitHash) throws IOException {
