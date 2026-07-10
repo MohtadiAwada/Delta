@@ -31,7 +31,7 @@ public class Branch {
         try (DataInputStream dis = new DataInputStream(new FileInputStream(branchFile))) {
             int version = dis.readInt();
             if (version != FORMAT_VERSION)
-                throw new IOException("Unknown branch format: " + version);
+                throw new IOException("Unknown branch format " + version);
 
             int count = dis.readInt();
             for (int i = 0; i < count; i++) {
