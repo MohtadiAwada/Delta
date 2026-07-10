@@ -47,7 +47,7 @@ public class DeltaCommand implements CommandExecutor{
                 cmdCheckout(sender, args);
                 return true;
             case "help":
-                cmdHelp(sender);
+                cmdHelp(sender, args);
                 return true;
             default:
                 sender.sendMessage("Delta: Unknown command.");
@@ -291,7 +291,12 @@ public class DeltaCommand implements CommandExecutor{
     // help
     //===========================================================
 
-    private void cmdHelp(CommandSender sender) {
+    private void cmdHelp(CommandSender sender, String[] args) {
+        if (args.length >= 2) {
+            cmdHelpDetail(sender, args[1].toLowerCase());
+            return;
+        }
+
         sender.sendMessage("§b=== Delta v0.1.0 ===");
         sender.sendMessage("§7/delta §fselect §7<project>§8 - §7select a project to work on");
         sender.sendMessage("§7/delta §fselected §8- §7show currently selected project");
@@ -520,6 +525,127 @@ public class DeltaCommand implements CommandExecutor{
             sender.sendMessage("  " + shortHash
                     + " — " + r.message()
                     + " (" + r.author() + ", " + time + ")");
+        }
+    }
+
+    private void cmdHelpDetail(CommandSender sender, String command) {
+        switch (command) {
+
+            case "initialize": case "init":
+                sender.sendMessage("§b=== /delta initialize ===");
+                sender.sendMessage("§7Alias: §finitialize§7, §finit");
+                sender.sendMessage("");
+                sender.sendMessage("§fUsage: §7/delta initialize <name> <x,y,z> <x,y,z>");
+                sender.sendMessage("");
+                sender.sendMessage("§7Creates a new Delta project for a region of your world.");
+                sender.sendMessage("§7Takes an initial save automatically so you have a");
+                sender.sendMessage("§7baseline to restore to.");
+                sender.sendMessage("");
+                sender.sendMessage("§fArguments:");
+                sender.sendMessage("  §7<name>    §8- §7project name, letters/numbers/underscores only");
+                sender.sendMessage("  §7<x,y,z>   §8- §7first corner of the region");
+                sender.sendMessage("  §7<x,y,z>   §8- §7second corner of the region");
+                sender.sendMessage("");
+                sender.sendMessage("§fExample:");
+                sender.sendMessage("  §7/delta initialize myhouse 0,64,0 64,100,64");
+                break;
+
+            case "save": case "commit":
+                sender.sendMessage("§b=== /delta save ===");
+                sender.sendMessage("§7Alias: §fsave§7, §fcommit");
+                sender.sendMessage("");
+                sender.sendMessage("§fUsage: §7/delta save <message>");
+                sender.sendMessage("");
+                sender.sendMessage("§7Saves the current state of your selected project.");
+                sender.sendMessage("§7Each save is stored permanently and can be restored");
+                sender.sendMessage("§7at any time using §f/delta restore§7.");
+                sender.sendMessage("");
+                sender.sendMessage("§fArguments:");
+                sender.sendMessage("  §7<message>  §8- §7a short description of what you built");
+                sender.sendMessage("");
+                sender.sendMessage("§fExample:");
+                sender.sendMessage("  §7/delta save added the north wall");
+                break;
+
+            case "restore": case "checkout":
+                sender.sendMessage("§b=== /delta restore ===");
+                sender.sendMessage("§7Alias: §frestore§7, §fcheckout");
+                sender.sendMessage("");
+                sender.sendMessage("§fUsage: §7/delta restore <saveHash>");
+                sender.sendMessage("");
+                sender.sendMessage("§7Restores your project region to the state it was in");
+                sender.sendMessage("§7at a specific save. Use §f/delta list commits §7to find");
+                sender.sendMessage("§7the save hash you want.");
+                sender.sendMessage("");
+                sender.sendMessage("§7You only need to type the first few characters of the");
+                sender.sendMessage("§7hash — Delta will find the match automatically.");
+                sender.sendMessage("§7If multiple saves match, type more characters.");
+                sender.sendMessage("");
+                sender.sendMessage("§fArguments:");
+                sender.sendMessage("  §7<saveHash>  §8- §7full or partial save hash");
+                sender.sendMessage("");
+                sender.sendMessage("§fExample:");
+                sender.sendMessage("  §7/delta restore a3f8c1b2");
+                break;
+
+            case "select":
+                sender.sendMessage("§b=== /delta select ===");
+                sender.sendMessage("");
+                sender.sendMessage("§fUsage: §7/delta select <project>");
+                sender.sendMessage("");
+                sender.sendMessage("§7Selects a project to work on. Once selected, you");
+                sender.sendMessage("§7don't need to type the project name in every command.");
+                sender.sendMessage("§7Your selection resets when you leave the server.");
+                sender.sendMessage("");
+                sender.sendMessage("§fArguments:");
+                sender.sendMessage("  §7<project>  §8- §7name of an existing project");
+                sender.sendMessage("");
+                sender.sendMessage("§fExample:");
+                sender.sendMessage("  §7/delta select myhouse");
+                break;
+
+            case "selected":
+                sender.sendMessage("§b=== /delta selected ===");
+                sender.sendMessage("");
+                sender.sendMessage("§fUsage: §7/delta selected");
+                sender.sendMessage("");
+                sender.sendMessage("§7Shows which project you currently have selected.");
+                sender.sendMessage("§7Same as running §f/delta select §7with no arguments.");
+                break;
+
+            case "list":
+                sender.sendMessage("§b=== /delta list ===");
+                sender.sendMessage("");
+                sender.sendMessage("§fUsage: §7/delta list projects");
+                sender.sendMessage("§fUsage: §7/delta list commits [amount]");
+                sender.sendMessage("");
+                sender.sendMessage("§7§flist projects §7— shows all projects on this server.");
+                sender.sendMessage("");
+                sender.sendMessage("§7§flist commits §7— shows saves for the selected project,");
+                sender.sendMessage("§7most recent last. Optionally pass a number to limit");
+                sender.sendMessage("§7how many are shown. Default shows all.");
+                sender.sendMessage("");
+                sender.sendMessage("§fExamples:");
+                sender.sendMessage("  §7/delta list projects");
+                sender.sendMessage("  §7/delta list commits");
+                sender.sendMessage("  §7/delta list commits 5");
+                break;
+
+            case "help":
+                sender.sendMessage("§b=== /delta help ===");
+                sender.sendMessage("");
+                sender.sendMessage("§fUsage: §7/delta help [command]");
+                sender.sendMessage("");
+                sender.sendMessage("§7Shows the list of all commands, or detailed info");
+                sender.sendMessage("§7about a specific command.");
+                sender.sendMessage("");
+                sender.sendMessage("§fExample:");
+                sender.sendMessage("  §7/delta help save");
+                break;
+
+            default:
+                sender.sendMessage("§cUnknown command: '" + command + "'");
+                sender.sendMessage("§7Run §f/delta help §7for the full command list.");
         }
     }
 }
