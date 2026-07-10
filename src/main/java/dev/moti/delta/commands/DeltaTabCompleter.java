@@ -20,7 +20,7 @@ public class DeltaTabCompleter implements TabCompleter {
         List<String> suggestions = new ArrayList<>();
 
         if (args.length  == 1) {
-            List<String> commands = List.of("init", "list", "select", "selected", "commit", "checkout", "debug");
+            List<String> commands = List.of("debug", "restore", "selected", "select", "restore", "save", "initialize", "help");
             for (String cmd : commands) {
                 if (cmd.startsWith(args[0].toLowerCase())) {
                     suggestions.add(cmd);

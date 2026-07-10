@@ -31,7 +31,7 @@ public class DeltaCommand implements CommandExecutor{
             case "list":
                 cmdList(sender, args);
                 return true;
-            case "init":
+            case "initialize": case "init":
                 cmdInit(sender, args);
                 return true;
             case "select":
@@ -40,10 +40,10 @@ public class DeltaCommand implements CommandExecutor{
             case "selected":
                 cmdSelected(sender, args);
                 return true;
-            case "commit":
+            case "save": case "commit":
                 cmdCommit(sender, args);
                 return true;
-            case "checkout":
+            case "restore": case "checkout":
                 cmdCheckout(sender, args);
                 return true;
             case "debug":
