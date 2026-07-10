@@ -39,6 +39,9 @@ public class DeltaCommand implements CommandExecutor{
             case "selected":
                 cmdSelected(sender, args);
                 return true;
+            case "commit":
+                cmdCommit(sender, args);
+                return true;
             case "debug":
                 cmdDebug(sender,args);
                 return true;
@@ -105,48 +108,32 @@ public class DeltaCommand implements CommandExecutor{
             return;
         }
 
-        List<ChunkSlice> slices = ChunkSlicer.slice(x1, y1, z1, x2, y2, z2);
-
-        List<Tree.BlobRef> blobRefs = new ArrayList<>();
-        for (ChunkSlice slice : slices) {
-            try {
-                String blobHash = Blob.write(objectsDir, player.getWorld(), slice);
-                blobRefs.add(new Tree.BlobRef(slice.x1(), slice.y1(), slice.z1(), slice.x2(), slice.y2(), slice.z2(), blobHash));
-            } catch (IOException e) {
-                sender.sendMessage("Delta: init: " + e.getMessage());
-                return;
-            }
-        }
-
-        String treeHash;
-        try {
-            treeHash = Tree.write(objectsDir, blobRefs);
-        } catch (IOException e) {
-            sender.sendMessage("Delta: init: " + e.getMessage());
-            return;
-        }
-
-        Commit.CommitResult result;
-        try {
-            result = Commit.write(objectsDir, treeHash, "", player.getName(), "initial commit.");
-        } catch (IOException e) {
-            sender.sendMessage("Delta: init: " + e.getMessage());
-            return;
-        }
+        Commit.CommitResult result = makeCommit(
+                objectsDir, player.getWorld(),
+                entry, "",
+                player.getName(), "initial commit",
+                sender
+        );
+        if (result == null) return;
 
         File branchFile = new File(branchesDir, "main.dlb");
         try {
-            Branch.CommitRecord record = new Branch.CommitRecord(result.hash(), "", player.getName(), result.timestamp(), "initial commit");
-            Branch.append(branchFile, record);
+            Branch.append(branchFile, new Branch.CommitRecord(
+                    result.hash(),
+                    "",
+                    player.getName(),
+                    result.timestamp(),
+                    "initial commit"
+            ));
         } catch (IOException e) {
-            sender.sendMessage("Delta: init: " + e.getMessage());
+            sender.sendMessage("Failed writing branch: " + e.getMessage());
             return;
         }
 
-        sender.sendMessage("DELTA:");
-        sender.sendMessage("Initialised project '"+projectName+"'.");
-        sender.sendMessage("Region: ("+x1+","+y1+","+z1+") -> ("+x2+","+y2+","+z2+")");
-
+        sender.sendMessage("=== Delta: Initialised '" + projectName + "' ===");
+        sender.sendMessage("Region: (" + x1+","+y1+","+z1+") -> ("+x2+","+y2+","+z2+")");
+        sender.sendMessage("Commit: " + result.hash().substring(0, 8) + " \"initial commit\"");
+        sender.sendMessage("Branch: main");
     }
 
     //===========================================================
@@ -212,6 +199,78 @@ public class DeltaCommand implements CommandExecutor{
         sender.sendMessage("Delta: Selected project '"+selected+"'.");
     }
 
+    //===========================================================
+    // debug
+    //===========================================================
+
+    private void cmdCommit(CommandSender sender, String[] args) {
+        if(!(sender instanceof Player player)) {
+            sender.sendMessage("Delta: This command must be run by a player.");
+            return;
+        }
+
+        if (args.length < 2) {
+            sender.sendMessage("Delta: commit: invalid arguments.");
+            return;
+        }
+
+        String message = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length));
+        String projectName = plugin.getSelected(player.getUniqueId());
+        if (projectName == null) {
+            sender.sendMessage("Delta: commit: No project selected. Use /delta select <name>.");
+            return;
+        }
+
+        RepoEntry entry = plugin.getRegistryManager().get(projectName);
+        if (entry == null) {
+            sender.sendMessage("Delta: commit: Project '"+projectName+"' not found.");
+            return;
+        }
+
+        File worldContainer = plugin.getServer().getWorldContainer();
+        File objectsDir  = new File(worldContainer, ".delta/" + projectName + "/objects");
+        File branchFile  = new File(worldContainer, ".delta/" + projectName + "/branches/main.dlb");
+
+        String parentHash;
+        try {
+            Branch.CommitRecord head = Branch.getHead(branchFile);
+            if (head == null) {
+                sender.sendMessage("Delta: commit: No initial commit.");
+                return;
+            }
+            parentHash = head.commitHash();
+        } catch (IOException e) {
+            sender.sendMessage("Delta: " + e.getMessage());
+            return;
+        }
+
+        Commit.CommitResult result = makeCommit(
+                objectsDir, player.getWorld(),
+                entry, parentHash,
+                player.getName(), message,
+                sender
+        );
+        if (result == null) return;
+
+        try {
+            Branch.append(branchFile, new Branch.CommitRecord(
+                    result.hash(),
+                    parentHash,
+                    player.getName(),
+                    result.timestamp(),
+                    message
+            ));
+        } catch (IOException e) {
+            sender.sendMessage("Failed updating branch: " + e.getMessage());
+            return;
+        }
+
+        sender.sendMessage("=== Delta: Committed to 'main' ===");
+        sender.sendMessage("Project: " + projectName);
+        sender.sendMessage("Commit:  " + result.hash().substring(0, 8) + " \"" + message + "\"");
+        sender.sendMessage("Parent:  " + parentHash.substring(0, 8));
+        sender.sendMessage("Author:  " + player.getName());
+    }
     //===========================================================
     // debug
     //===========================================================
@@ -303,4 +362,35 @@ public class DeltaCommand implements CommandExecutor{
                 Integer.parseInt(parts[2])
         };
     }
+
+    private Commit.CommitResult makeCommit(File objectsDir, org.bukkit.World world, RepoEntry entry, String parentHash, String author, String message, CommandSender sender) {
+
+        List<ChunkSlice> slices = ChunkSlicer.slice(entry.x1(), entry.y1(), entry.z1(), entry.x2(), entry.y2(), entry.z2());
+        List<Tree.BlobRef> blobRefs = new ArrayList<>();
+        for (ChunkSlice slice : slices) {
+            try {
+                String blobHash = Blob.write(objectsDir, world, slice);
+                blobRefs.add(new Tree.BlobRef(slice.x1(), slice.y1(), slice.z1(), slice.x2(), slice.y2(), slice.z2(), blobHash));
+            } catch (IOException e) {
+                sender.sendMessage("Delta: " + e.getMessage());
+                return null;
+            }
+        }
+
+        String treeHash;
+        try {
+            treeHash = Tree.write(objectsDir, blobRefs);
+        } catch (IOException e) {
+            sender.sendMessage("Failed writing tree: " + e.getMessage());
+            return null;
+        }
+
+        try {
+            return Commit.write(objectsDir, treeHash, parentHash, author, message);
+        } catch (IOException e) {
+            sender.sendMessage("Failed writing commit: " + e.getMessage());
+            return null;
+        }
+    }
+
 }
