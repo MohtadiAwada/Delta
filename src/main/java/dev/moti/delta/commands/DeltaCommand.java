@@ -46,6 +46,9 @@ public class DeltaCommand implements CommandExecutor{
             case "restore": case "checkout":
                 cmdCheckout(sender, args);
                 return true;
+            case "help":
+                cmdHelp(sender);
+                return true;
             default:
                 sender.sendMessage("Delta: Unknown command.");
                 return true;
@@ -282,6 +285,22 @@ public class DeltaCommand implements CommandExecutor{
         sender.sendMessage("Commit:  " + result.hash().substring(0, 8) + " \"" + message + "\"");
         sender.sendMessage("Parent:  " + parentHash.substring(0, 8));
         sender.sendMessage("Author:  " + player.getName());
+    }
+
+    //===========================================================
+    // help
+    //===========================================================
+
+    private void cmdHelp(CommandSender sender) {
+        sender.sendMessage("§b=== Delta v0.1.0 ===");
+        sender.sendMessage("§7/delta §fselect §7<project>§8 - §7select a project to work on");
+        sender.sendMessage("§7/delta §fselected §8- §7show currently selected project");
+        sender.sendMessage("§7/delta §finitialize §7<name> <x,y,z> <x,y,z>§8 - §7create a new project");
+        sender.sendMessage("§7/delta §fsave §7<message>§8 - §7save current state of selected project");
+        sender.sendMessage("§7/delta §frestore §7<commitHash>§8 - §7restore project to a past save");
+        sender.sendMessage("§7/delta §flist projects§8 - §7show all projects");
+        sender.sendMessage("§7/delta §flist commits §7[amount]§8 - §7show recent saves");
+        sender.sendMessage("§7/delta §fhelp §7<command>§8 - §7show details about a command");
     }
 
     //===========================================================
