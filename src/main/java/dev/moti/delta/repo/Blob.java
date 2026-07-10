@@ -3,10 +3,7 @@ package dev.moti.delta.repo;
 import org.bukkit.World;
 
 import java.io.*;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
+import java.util.*;
 
 public class Blob {
     private static final int FORMAT_VERSION = 1;
@@ -40,6 +37,39 @@ public class Blob {
         }
         return hash;
     }
+
+    public static Map<BlockPos, String> read (File objectsDir, String blobHash) throws IOException{
+        File target = ObjectStore.objectFile(objectsDir,blobHash);
+        Map<BlockPos, String> result = new HashMap<>();
+
+        try (DataInputStream dis = new DataInputStream(new FileInputStream(target))) {
+            int version = dis.readInt();
+            if (version != FORMAT_VERSION) throw new IOException("Unknown blob format '"+version+"'.");
+
+            int x1 = dis.readInt(), y1 = dis.readInt(), z1 = dis.readInt();
+            int x2 = dis.readInt(), y2 = dis.readInt(), z2 = dis.readInt();
+
+            int paletteSize = dis.readShort();
+            String[] palette = new String[paletteSize];
+            for (int i = 0; i < paletteSize; i++) {
+                palette[i] = dis.readUTF();
+            }
+
+            int totalBlocks = dis.readInt();
+            int i = 0;
+            for (int x = x1; x <= x2; x++) {
+                for (int y = y1; y <= y2; y++) {
+                    for (int z = z1; z <= z2; z++) {
+                        short idx = dis.readShort();
+                        result.put(new BlockPos(x, y, z), palette[idx]);
+                        i++;
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
     private static byte[] serialize(ChunkSlice slice, List<String> palette, short[] indices) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(baos);

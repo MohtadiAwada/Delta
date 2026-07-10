@@ -3,6 +3,8 @@ package dev.moti.delta.repo;
 import java.io.File;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ObjectStore {
     public static String sha256(byte[] data) {
@@ -20,5 +22,17 @@ public class ObjectStore {
         String prefix = hash.substring(0, 2);
         String rest = hash.substring(2);
         return new File(objectsDir, prefix + "/" + rest + ".dat");
+    }
+
+    public static String[] resolveHash(List<String> candidates, String shortHash) {
+        List<String> matches = new ArrayList<>();
+
+        for (String hash : candidates) {
+            if (hash.startsWith(shortHash)) {
+                matches.add(hash);
+            }
+        }
+
+        return matches.toArray(new String[0]);
     }
 }

@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 
 public class DeltaCommand implements CommandExecutor{
@@ -41,6 +42,9 @@ public class DeltaCommand implements CommandExecutor{
                 return true;
             case "commit":
                 cmdCommit(sender, args);
+                return true;
+            case "checkout":
+                cmdCheckout(sender, args);
                 return true;
             case "debug":
                 cmdDebug(sender,args);
@@ -211,7 +215,7 @@ public class DeltaCommand implements CommandExecutor{
     }
 
     //===========================================================
-    // debug
+    // commit
     //===========================================================
 
     private void cmdCommit(CommandSender sender, String[] args) {
@@ -282,6 +286,118 @@ public class DeltaCommand implements CommandExecutor{
         sender.sendMessage("Parent:  " + parentHash.substring(0, 8));
         sender.sendMessage("Author:  " + player.getName());
     }
+
+    //===========================================================
+    // checkout
+    //===========================================================
+
+    private void cmdCheckout(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("Delta: This command must be run by a player.");
+            return;
+        }
+
+        if (args.length < 2) {
+            sender.sendMessage("Delta: checkout: Invalid argument.");
+            return;
+        }
+
+        String shortHash = args[1];
+        String projectName = plugin.getSelected(player.getUniqueId());
+        if (projectName == null) {
+            sender.sendMessage("Delta: No project selected. Use /delta select <name>.");
+            return;
+        }
+
+        File worldContainer = plugin.getServer().getWorldContainer();
+        File objectsDir = new File(worldContainer, ".delta/" + projectName + "/objects");
+        File branchFile = new File(worldContainer, ".delta/" + projectName + "/branches/main.dlb");
+
+        List<Branch.CommitRecord> records;
+        try {
+            records = Branch.read(branchFile);
+        } catch (IOException e) {
+            sender.sendMessage("Delta: " + e.getMessage());
+            return;
+        }
+
+        if (records.isEmpty()) {
+            sender.sendMessage("Delta: checkout: No commits found in this project.");
+            return;
+        }
+
+        List<String> knownHashes = new ArrayList<>();
+        for (Branch.CommitRecord r : records) {
+            knownHashes.add(r.commitHash());
+        }
+
+        String[] matches = ObjectStore.resolveHash(knownHashes, shortHash);
+        if (matches.length == 0) {
+            sender.sendMessage("Delta: checkout: No commit found matching '" + shortHash + "'.");
+            return;
+        }
+
+        if (matches.length > 1) {
+            sender.sendMessage("Delta: checkout: Ambiguous hash '" + shortHash + "' matches:");
+            for (String m : matches) {
+                sender.sendMessage("  " + m.substring(0, 12));
+            }
+            sender.sendMessage("Delta: checkout: Enter more characters.");
+            return;
+        }
+
+        String fullHash = matches[0];
+
+        Commit.CommitData commitData;
+        try {
+            commitData = Commit.read(objectsDir, fullHash);
+        } catch (IOException e) {
+            sender.sendMessage("Delta: " + e.getMessage());
+            return;
+        }
+
+        List<Tree.BlobRef> refs;
+        try {
+            refs = Tree.read(objectsDir, commitData.treeHash());
+        } catch (IOException e) {
+            sender.sendMessage("Delta: " + e.getMessage());
+            return;
+        }
+
+        org.bukkit.World world = player.getWorld();
+        int totalRestored = 0;
+
+        for (Tree.BlobRef ref : refs) {
+            Map<BlockPos, String> blocks;
+            try {
+                blocks = Blob.read(objectsDir, ref.hash());
+            } catch (IOException e) {
+                sender.sendMessage("Failed to read blob: " + e.getMessage());
+                return;
+            }
+
+            for (Map.Entry<BlockPos, String> block : blocks.entrySet()) {
+                BlockPos pos = block.getKey();
+                String state = block.getValue();
+
+                try {
+                    org.bukkit.block.data.BlockData blockData = plugin.getServer().createBlockData(state);
+                    world.getBlockAt(pos.x(), pos.y(), pos.z()).setBlockData(blockData, false);
+                    totalRestored++;
+                } catch (IllegalArgumentException e) {
+                    // unknown block state — skip
+                }
+            }
+        }
+
+        sender.sendMessage("=== Delta: Checkout ===");
+        sender.sendMessage("Project: " + projectName);
+        sender.sendMessage("Commit:  " + fullHash.substring(0, 8)
+                + " \"" + commitData.message() + "\"");
+        sender.sendMessage("Author:  " + commitData.author());
+        sender.sendMessage("Restored " + totalRestored + " blocks.");
+    }
+
     //===========================================================
     // debug
     //===========================================================
