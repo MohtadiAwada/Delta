@@ -28,7 +28,7 @@ public class DeltaCommand implements CommandExecutor{
         }
         switch (args[0].toLowerCase()) {
             case "list":
-                cmdList(sender);
+                cmdList(sender, args);
                 return true;
             case "init":
                 cmdInit(sender, args);
@@ -140,19 +140,30 @@ public class DeltaCommand implements CommandExecutor{
     // list
     //===========================================================
 
-    private void cmdList(CommandSender sender) {
-        List<RepoEntry> all = plugin.getRegistryManager().getAll();
-
-        if (all.isEmpty()) {
-            sender.sendMessage("Delta: No Projects.");
+    private void cmdList(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage("Delta: list: Invalid arguments.");
             return;
         }
 
-        sender.sendMessage("=== DELTA PROJECTS ===");
-        for (RepoEntry e : all) {
-            sender.sendMessage("  " + e.name() + " — " + e.world()
-                    + " (" + e.x1() + "," + e.y1() + "," + e.z1()
-                    + ") -> (" + e.x2() + "," + e.y2() + "," + e.z2() + ")");
+        switch (args[1].toLowerCase()) {
+            case "projects":
+                cmdListProjects(sender);
+                break;
+            case "commits":
+                int amount = 0;
+                if (args.length >= 3) {
+                    try {
+                        amount = Integer.parseInt(args[2]);
+                    } catch (NumberFormatException e) {
+                        sender.sendMessage("Delta: list: Amount must be a number.");
+                        return;
+                    }
+                }
+                cmdListCommits(sender, amount);
+                break;
+            default:
+                sender.sendMessage("Delta: list: '" + args[1] + "'. Use 'projects' or 'commits'.");
         }
     }
 
@@ -261,7 +272,7 @@ public class DeltaCommand implements CommandExecutor{
                     message
             ));
         } catch (IOException e) {
-            sender.sendMessage("Failed updating branch: " + e.getMessage());
+            sender.sendMessage("Delta: " + e.getMessage());
             return;
         }
 
@@ -381,16 +392,80 @@ public class DeltaCommand implements CommandExecutor{
         try {
             treeHash = Tree.write(objectsDir, blobRefs);
         } catch (IOException e) {
-            sender.sendMessage("Failed writing tree: " + e.getMessage());
+            sender.sendMessage("Delta: " + e.getMessage());
             return null;
         }
 
         try {
             return Commit.write(objectsDir, treeHash, parentHash, author, message);
         } catch (IOException e) {
-            sender.sendMessage("Failed writing commit: " + e.getMessage());
+            sender.sendMessage("Delta: " + e.getMessage());
             return null;
         }
     }
 
+    private void cmdListProjects(CommandSender sender) {
+        List<RepoEntry> all = plugin.getRegistryManager().getAll();
+
+        if (all.isEmpty()) {
+            sender.sendMessage("Delta: No projects found.");
+            return;
+        }
+
+        sender.sendMessage("=== Delta Projects ===");
+        for (RepoEntry e : all) {
+            sender.sendMessage("  " + e.name() + " — " + e.world()
+                    + " (" + e.x1() + "," + e.y1() + "," + e.z1()
+                    + ") -> (" + e.x2() + "," + e.y2() + "," + e.z2() + ")");
+        }
+    }
+
+    private void cmdListCommits (CommandSender sender, int amount) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("Delta: This command must be run by a player.");
+            return;
+        }
+
+        String projectName = plugin.getSelected(player.getUniqueId());
+        if (projectName == null) {
+            sender.sendMessage("Delta: No project selected. Use /delta select <name>.");
+            return;
+        }
+
+        File branchFile = new File(
+                plugin.getServer().getWorldContainer(),
+                ".delta/" + projectName + "/branches/main.dlb"
+        );
+
+        List<Branch.CommitRecord> records;
+        try {
+            records = Branch.read(branchFile);
+        } catch (IOException e) {
+            sender.sendMessage("Delta: " + e.getMessage());
+            return;
+        }
+
+        if (records.isEmpty()) {
+            sender.sendMessage("Delta: list: No commits yet.");
+            return;
+        }
+
+        List<Branch.CommitRecord> recent;
+        if (amount == 0) {
+            recent = records;
+        } else {
+            int from = Math.max(0, records.size() - amount);
+            recent = records.subList(from, records.size());
+        }
+
+        sender.sendMessage("=== Commits: " + projectName + " (" + recent.size() + " shown) ===");
+        for (Branch.CommitRecord r : recent) {
+            String shortHash = r.commitHash().substring(0, 8);
+            String time = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm")
+                    .format(new java.util.Date(r.timestamp()));
+            sender.sendMessage("  " + shortHash
+                    + " — " + r.message()
+                    + " (" + r.author() + ", " + time + ")");
+        }
+    }
 }

@@ -37,6 +37,11 @@ public class DeltaTabCompleter implements TabCompleter {
                             suggestions.add(dClass);
                         }
                     }
+                case "list":
+                    for (String s : List.of("projects", "commits")) {
+                        if (s.startsWith(args[1].toLowerCase())) suggestions.add(s);
+                    }
+                    return suggestions;
                 default:
                     break;
             }
