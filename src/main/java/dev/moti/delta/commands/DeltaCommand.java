@@ -38,7 +38,7 @@ public class DeltaCommand implements CommandExecutor{
                 cmdSelect(sender, args);
                 return true;
             case "selected":
-                cmdSelected(sender, args);
+                cmdSelected(sender);
                 return true;
             case "save": case "commit":
                 cmdCommit(sender, args);
@@ -178,7 +178,7 @@ public class DeltaCommand implements CommandExecutor{
             return;
         }
         if (args.length < 2) {
-            sender.sendMessage("Delta: select: Invalid arguments");
+            cmdSelected(sender);
             return;
         }
         String projectName = args[1];
@@ -195,7 +195,7 @@ public class DeltaCommand implements CommandExecutor{
     // selected
     //===========================================================
 
-    private void cmdSelected(CommandSender sender, String[] args) {
+    private void cmdSelected(CommandSender sender) {
         if(!(sender instanceof Player player)) {
             sender.sendMessage("Delta: This command must be run by a player.");
             return;
