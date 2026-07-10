@@ -24,7 +24,7 @@ Delta brings Git-inspired saving and restoring to Minecraft building projects. S
 
 ## Installation
 
-1. Download `delta-0.1.0.jar` from the [releases page](https://github.com/moti/delta/releases)
+1. Download `delta-0.1.0.jar` from the [releases page](https://github.com/MohtadiAwada/Delta/releases)
 2. Drop it into your server's `plugins/` folder
 3. Restart the server
 
