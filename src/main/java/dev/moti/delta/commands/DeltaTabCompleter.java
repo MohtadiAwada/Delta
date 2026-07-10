@@ -30,13 +30,6 @@ public class DeltaTabCompleter implements TabCompleter {
         }
         if (args.length == 2) {
             switch(args[0].toLowerCase()) {
-                case "debug":
-                    List<String> debugList = List.of("chunkslicer", "blob");
-                    for (String dClass : debugList) {
-                        if (dClass.startsWith(args[1].toLowerCase())) {
-                            suggestions.add(dClass);
-                        }
-                    }
                 case "list":
                     for (String s : List.of("projects", "commits")) {
                         if (s.startsWith(args[1].toLowerCase())) suggestions.add(s);
