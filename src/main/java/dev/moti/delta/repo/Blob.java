@@ -55,7 +55,7 @@ public class Blob {
                 palette[i] = dis.readUTF();
             }
 
-            int totalBlocks = dis.readInt();
+            dis.readInt(); // total block count
             int i = 0;
             for (int x = x1; x <= x2; x++) {
                 for (int y = y1; y <= y2; y++) {

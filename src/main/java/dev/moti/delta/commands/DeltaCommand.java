@@ -46,6 +46,9 @@ public class DeltaCommand implements CommandExecutor{
             case "restore": case "checkout":
                 cmdCheckout(sender, args);
                 return true;
+            case "status":
+                cmdStatus(sender, args);
+                return true;
             case "help":
                 cmdHelp(sender, args);
                 return true;
@@ -53,6 +56,64 @@ public class DeltaCommand implements CommandExecutor{
                 sender.sendMessage("§cDelta: Unknown command.");
                 return true;
         }
+    }
+
+    //===========================================================
+    // status
+    //===========================================================
+
+    private void cmdStatus(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("§cDelta: This command must be run by a player.");
+            return;
+        }
+
+        String projectName = plugin.getSelected(player.getUniqueId());
+        if (projectName == null) {
+            sender.sendMessage("§cDelta: status: No project selected. Use /delta select <name>.");
+            return;
+        }
+
+        if (!plugin.getRegistryManager().exists(projectName)) {
+            sender.sendMessage("§cDelta: status: Project '" + projectName + "' not found.");
+            return;
+        }
+
+        File worldContainer = plugin.getServer().getWorldContainer();
+        File objectsDir = new File(worldContainer, ".delta/" + projectName + "/objects");
+        File branchFile = new File(worldContainer, ".delta/" + projectName + "/branches/main.dlb");
+
+        sender.sendMessage("§7Delta: status: Scanning region...");
+
+        Map<BlockPos, StatusChecker.BlockChange> changes;
+        try {
+            changes = StatusChecker.check(objectsDir, branchFile, player.getWorld());
+        } catch (IOException e) {
+            sender.sendMessage("§cDelta: status: Failed to read commit data: " + e.getMessage());
+            return;
+        }
+
+        sender.sendMessage("§b=== Delta Status: " + projectName + " ===");
+
+        if (changes.isEmpty()) {
+            sender.sendMessage("§aDelta: Nothing to commit — region is clean.");
+            return;
+        }
+
+        int added = 0, removed = 0, modified = 0;
+        for (StatusChecker.BlockChange c : changes.values()) {
+            switch (c.type()) {
+                case ADDED -> added++;
+                case REMOVED -> removed++;
+                case MODIFIED -> modified++;
+            }
+        }
+
+        if (added    > 0) sender.sendMessage("§a  + " + added    + " block(s) added");
+        if (removed  > 0) sender.sendMessage("§c  - " + removed  + " block(s) removed");
+        if (modified > 0) sender.sendMessage("§e  ~ " + modified + " block(s) modified");
+        sender.sendMessage("§7Delta: Total: §f" + changes.size() + " change(s)");
+        sender.sendMessage("§7Delta: Run §f/delta save <message> §7to commit.");
     }
 
     //===========================================================
@@ -305,6 +366,7 @@ public class DeltaCommand implements CommandExecutor{
         sender.sendMessage("§7/delta §frestore §7<commitHash>§8 - §7restore project to a past save");
         sender.sendMessage("§7/delta §flist projects§8 - §7show all projects");
         sender.sendMessage("§7/delta §flist commits §7[amount]§8 - §7show recent saves");
+        sender.sendMessage("§7/delta §fstatus §7[project]§8 - §7show changes since last save");
         sender.sendMessage("§7/delta §fhelp §7<command>§8 - §7show details about a command");
     }
 
@@ -626,6 +688,22 @@ public class DeltaCommand implements CommandExecutor{
                 sender.sendMessage("  §7/delta list projects");
                 sender.sendMessage("  §7/delta list commits");
                 sender.sendMessage("  §7/delta list commits 5");
+                break;
+
+            case "status":
+                sender.sendMessage("§b=== /delta status ===");
+                sender.sendMessage("");
+                sender.sendMessage("§fUsage: §7/delta status [project]");
+                sender.sendMessage("");
+                sender.sendMessage("§7Shows what has changed in the region since the last save.");
+                sender.sendMessage("§7Scans every block in the region and compares against");
+                sender.sendMessage("§7the last saved state.");
+                sender.sendMessage("");
+                sender.sendMessage("§7If no project is specified, uses the selected project.");
+                sender.sendMessage("");
+                sender.sendMessage("§fExample:");
+                sender.sendMessage("  §7/delta status");
+                sender.sendMessage("  §7/delta status myhouse");
                 break;
 
             case "help":
